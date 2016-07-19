@@ -1,0 +1,324 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"Fiel",
+				"FieldNotFoundException"
+			],
+			[
+				"No",
+				"NoAnswerKeyException"
+			],
+			[
+				"executeGet",
+				"executeGetAuthorizeAnswer"
+			],
+			[
+				"Re",
+				"RequestKey"
+			],
+			[
+				"Se",
+				"Session"
+			],
+			[
+				"fill",
+				"fillDictionary"
+			],
+			[
+				"ans",
+				"AnswerKey"
+			],
+			[
+				"Pa",
+				"PaymentEndPoint"
+			],
+			[
+				"xml",
+				"xmlPayload"
+			],
+			[
+				"lo",
+				"loadPaymentMessage"
+			],
+			[
+				"E",
+				"EMAILCLIENTE"
+			],
+			[
+				"exe",
+				"executeCommand"
+			],
+			[
+				"log",
+				"logInfo"
+			],
+			[
+				"get",
+				"getAnswer"
+			],
+			[
+				"i",
+				"initConnector"
+			],
+			[
+				"co",
+				"Command"
+			],
+			[
+				"wri",
+				"write"
+			],
+			[
+				"write",
+				"writeDictionary"
+			],
+			[
+				"param",
+				"parameters"
+			],
+			[
+				"writ",
+				"writeDictionary"
+			],
+			[
+				"in",
+				"InputPath"
+			],
+			[
+				"out",
+				"outputPath"
+			],
+			[
+				"para",
+				"parameters"
+			],
+			[
+				"inpu",
+				"inputPath"
+			],
+			[
+				"p",
+				"path"
+			],
+			[
+				"con",
+				"ConfigurationException"
+			],
+			[
+				"C",
+				"ConfigurationException"
+			],
+			[
+				"ava",
+				"availableCommands"
+			],
+			[
+				"e",
+				"eval"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"contents": "#log\nimport sys\nimport os\nimport os.path\nimport traceback\nimport httplib, urllib\nimport requests\n\nfrom suds.sudsobject import asdict\n\n#path to Python SDK\nsys.path = ['..\\lib'] + sys.path\n\nfrom todopagoconnector import TodoPagoConnector\n\ntry:\n	from Tkinter import *\nexcept ImportError:\n	from tkinter import *\n\ntry:\n	import ttk\nexcept ImportError:\n	import tkinter.ttk as ttk\n\n#logs functions\ndef logError(message):\n	print(\"ERROR: \" + message)\n\ndef logInfo(message):\n	print(\"INFO:\" + message)	\n\ndef logTitle(message):\n	print(message.upper())	\n\n#ConfigurationException\nclass ConfigurationException(Exception):\n	def __init__( self, message ):\n		self.message = message\n		Exception.__init__(self, message) \n\n#FieldNotFoundException\nclass FieldNotFoundException(Exception):\n	def __init__( self, message ):\n		self.message = message\n		Exception.__init__(self, message) \n\n#NoAnswerKeyException\nclass NoAnswerKeyException(Exception):\n	def __init__( self, message ):\n		self.message = message\n		Exception.__init__(self, message) 	\n\n#main class Program\nclass Program:\n	#Gets or sets the input path\n	inputPath = \"\"\n	#Gets or sets the output path\n	outputPath = \"\"\n\n	#Gets or sets the command\n	command = \"\"\n\n	#Gets or sets the xml Path for PaymentFlow command\n	xmlPath = \"\"\n\n	#The Send authorize request method\n	sendRequest = \"SendAuthorizeRequest\"\n\n	#The Get authorize Answer\n	getAnswer = \"GetAuthorizeAnswer\"\n\n	#The Get authorize Answer\n	getStatus = \"GetStatus\"\n\n	#The payment flow complete \n	paymentFlow = \"PaymentFlow\"\n\n	#The list of available commands\n	availableCommands = [sendRequest,getAnswer,getStatus,paymentFlow]\n\n	#Evaluates and fills the program's parameter\n	#param name=\"args\":The array of arguments:\n	#     For /SendAuthorizeRequest: c:SendAuthorizeRequest /i:.\\Samples\\Sample_01_SendRequest.ini /o:.\\Samples\\Sample_01_SendRequest.out\n	#     For Payment flow: /c:PaymentFlow /i:.\\Samples\\Sample_01_PaymentFlow.ini /o:.\\Samples\\Sample_01_PaymentFlow.out /x:.\\Samples\\WS_Execute_Request.xml\n	#returns: <b>True</b> if continue, <b>false</b> otherwise</returns>\n	def evaluateParameters(self, params):\n		eval = 1\n		for i in range(0, len(params)):		\n			if params[i] == \"/?\":\n				eval = 0\n				print(\"Usage mode: >Adapter /c:{command} /i:{Path and file} /o:{Path and file} /x:{Path and File}\")\n				print(\"Where:\")\n				print(\"/c: The command name, must be one of following: \" + \"\".join( e + \",\" for e in self.availableCommands))\n				print(\"/i: Path and filename for input file (command's parameters values file)\")\n				print(\"/o: Path and filename for output file (command's response file)\")\n				print(\"/x: Path and filename for xml payment service, required for [\" + self.paymentFlow + \"] command\")\n\n			if params[i][:3].upper() == \"/C:\":\n				self.command = params[i][3:]\n				if not self.command in self.availableCommands:\n					raise ConfigurationException(\"Command [%s] is unrecognized.\" % self.command)\n			\n			if params[i][:3].upper() == \"/I:\":\n				self.inputPath = params[i][3:]\n				self.inputPath = os.path.join(os.getcwd(), self.inputPath)\n				if not os.path.isfile(self.inputPath):\n					raise ConfigurationException(\"File [%s] not found.\" % self.inputPath)\n\n			if params[i][:3].upper() == \"/O:\":\n				self.outputPath = params[i][3:]\n				self.outputPath = os.path.join(os.getcwd(), self.outputPath)\n				if not os.path.isdir(os.path.dirname(self.outputPath)):\n					raise ConfigurationException(\"Path [%s] not found.\" % os.path.dirname(self.outputPath))\n\n			if params[i][:3].upper() == \"/X:\":\n				self.xmlPath = params[i][3:]\n				self.xmlPath = os.path.join(os.getcwd(), self.xmlPath)\n				if not os.path.isfile(self.xmlPath):\n					raise ConfigurationException(\"File [%s] not found.\" % self.xmlPath)\n\n		if self.command == \"\":\n			raise ConfigurationException(\"Command wasn't configured, execute with /? for more information\")\n\n		if self.inputPath == \"\":\n			raise ConfigurationException(\"InputPath wasn't configured, execute with /? for more information\")\n\n		if self.outputPath == \"\":\n			raise ConfigurationException(\"OutputPath wasn't configured, execute with /? for more information\")\n\n		if self.xmlPath == \"\" and self.command == self.paymentFlow:\n			raise ConfigurationException(\"XmlPath wasn't configured, execute with /? for more information\")\n		\n		logInfo(\"Configuration completed.\")\n		return eval\n\n	def loadParameters(self):\n		parameters = {}\n		with open(self.inputPath) as f:\n			lines = f.readlines()\n\n		for line in lines:\n			if not line.strip() == \"\" and not line[:2] == \"//\":\n				values = line.split(\"=\")\n				name = values[0].strip()\n				if name == \"URL OK\":\n					name = \"URL_OK\"\n\n				if name == \"URL Error\":\n					name = \"URL_ERROR\"\n\n				if name == \"Encoding Method\":\n					name = \"EncodingMethod\"\n\n				value = values[1].strip()\n				if value == \"null\":					\n					value = \"\"\n\n				parameters[name] = value \n\n		return parameters\n\n	def writeResponse(self, message):\n		f = open(self.outputPath,\"w\")\n		self.writeDictionary(message, f)\n		f.close()\n		logInfo(\"File %s has been wroten.\" % self.outputPath)\n\n	\n	def writeDictionary(self, message, f):	\n		for key, value in message.iteritems():\n			if isinstance(value, dict):\n				f.write(\"******************\" + key + \"****************************\\n\")\n				self.writeDictionary(value, f)\n				f.write(\"\\n\")\n			else:	\n				f.write(key + \"=\" + str(value) + \"\\n\")\n\n	def executeCommand(self, message):\n		sdk = SkdServices()\n		conn = sdk.initConnector(message)\n		response = {}\n\n		if self.command == self.sendRequest:\n			response = sdk.executeSendAuthorizeRequest(message, conn)\n\n		if self.command == self.getAnswer:\n			response = sdk.executeGetAuthorizeAnswer(message, conn)\n\n		if self.command == self.getStatus:\n			response = sdk.executeGetStatus(message, conn)\n\n		if self.command == self.paymentFlow:\n			response[self.sendRequest] = sdk.executeSendAuthorizeRequest(message, conn)\n			response[self.paymentFlow] = sdk.executePaymentService(message, self.xmlPath)\n			response[self.getAnswer] = sdk.executeGetAuthorizeAnswer(message, conn)\n\n		logInfo(\"Command [%s] completed has been executed.\" % self.command)\n		return response\n\nclass SkdServices:\n\n	# The service End point\n	EndPoint = \"EndPoint\"\n\n	# The authorization key\n	Authorization = \"Authorization\"\n\n	# The security key\n	Security = \"Security\"\n\n	#The session key\n	Session = \"Session\"\n\n	# The merchant key\n	Merchant = \"Merchant\"\n\n	# The Request key\n	RequestKey = \"RequestKey\"\n\n	# The public request  key\n	PublicRequestKey = \"PublicRequestKey\"\n\n	# The Answer key\n	AnswerKey = \"AnswerKey\"\n\n	# The url for ok\n	UrlOk = \"URL_OK\"\n\n	# The url for error\n	UrlError = \"URL_ERROR\"\n\n	# The encoding method\n	EncodingMethod = \"EncodingMethod\"\n\n	# The payment End Point\n	PaymentEndPoint = \"PaymentEndPoint\"\n\n	# The operation Id\n	OperationId = \"OPERATIONID\"\n\n	# The Currency Code\n	CurrencyCode = \"CURRENCYCODE\"\n\n	# The amount value\n	Amount = \"AMOUNT\"\n\n	# The email client\n	EmailCliente = \"EMAILCLIENTE\"\n\n	# The CSBT City\n	CsbtCity = \"CSBTCITY\"\n\n	# The CSBT Country\n	CsbtCountry = \"CSBTCOUNTRY\"\n\n	# The CSBT Email\n	CsbtEmail = \"CSBTEMAIL\"\n\n	# The CSBT First Name\n	CsbtFirstName = \"CSBTFIRSTNAME\"\n\n	# The CSBT Last Name\n	CsbtLastName = \"CSBTLASTNAME\"\n\n	# The CSBT Phone Number\n	CsbtPhoneNumber = \"CSBTPHONENUMBER\"\n\n	# The CSBT Postal Code\n	CsbtPostalCode = \"CSBTPOSTALCODE\"\n\n	# The CSBT State\n	CsbtState = \"CSBTSTATE\"\n\n	# The CSBT Street 1\n	CsbtStreet1 = \"CSBTSTREET1\"\n\n	# The CSBT Street 2\n	CsbtStreet2 = \"CSBTSTREET2\"\n\n	# The CSBT Customer Id\n	CsbtCustomerId = \"CSBTCUSTOMERID\"\n\n	# The CSBT IP Address\n	CsbtIpAddress = \"CSBTIPADDRESS\"\n\n	# The CSPT currency\n	CsptCurrency = \"CSPTCURRENCY\"\n\n	# The CSPT Grand Total Amount\n	CsptGrandTotalAmount = \"CSPTGRANDTOTALAMOUNT\"\n\n	# The CSMDD 6\n	Csmdd6 = \"CSMDD6\"\n\n	# The CSMDD 7\n	Csmdd7 = \"CSMDD7\"\n\n	# The CSMDD 8\n	Csmdd8 = \"CSMDD8\"\n\n	# The CSMDD 9\n	Csmdd9 = \"CSMDD9\"\n\n	# The CSMDD 10\n	Csmdd10 = \"CSMDD10\"\n\n	# The CSMDD 11\n	Csmdd11 = \"CSMDD11\"\n\n	# The CSST City\n	CsstCity = \"CSSTCITY\"\n\n	# The CSST Country\n	CsstCountry = \"CSSTCOUNTRY\"\n\n	# The CSST Email\n	CsstEmail = \"CSSTEMAIL\"\n\n	# The CSST First Name\n	CsstFirstName = \"CSSTFIRSTNAME\"\n\n	# The CSST Last Name\n	CsstLastName = \"CSSTLASTNAME\"\n\n	# The CSST Phone Number\n	CsstPhoneNumber = \"CSSTPHONENUMBER\"\n\n	# The CSST Postal Code\n	CsstPostalCode = \"CSSTPOSTALCODE\"\n\n	# The CSST State\n	CsstState = \"CSSTSTATE\"\n\n	# The CSST Street 1\n	CsstStreet1 = \"CSSTSTREET1\"\n\n	# The CSST Street 2\n	CsstStreet2 = \"CSSTSTREET2\"\n\n	# The CSIT Product Code\n	CsitProductCode = \"CSITPRODUCTCODE\"\n\n	# The CSIT Product Description\n	CsitProductDescription = \"CSITPRODUCTDESCRIPTION\"\n\n	# The CSIT Product Name\n	CsitProductName = \"CSITPRODUCTNAME\"\n\n	# The CSIT Product SKU\n	CsitProductSku = \"CSITPRODUCTSKU\"\n\n	# The CSIT Total Amount\n	CsitTotalAmount = \"CSITTOTALAMOUNT\"\n\n	# The CSIT Quantity\n	CsitQuantity = \"CSITQUANTITY\"\n\n	# The CSIT Unit Price\n	CsitUnitPrice = \"CSITUNITPRICE\"\n\n	# The CSMD 12\n	Csmdd12 = \"CSMDD12\"\n\n	# The CSMD 13\n	Csmdd13 = \"CSMDD13\"\n\n	# The CSMD 14\n	Csmdd14 = \"CSMDD14\"\n\n	# The CSMD 15\n	Csmdd15 = \"CSMDD15\"\n\n	# The CSMD 16\n	Csmdd16 = \"CSMDD16\"\n\n	def initConnector(self, parameters):\n		j_header_http = {self.Authorization:parameters[self.Authorization]}\n		return TodoPagoConnector(j_header_http, 'test')\n\n	def executeGetStatus(self, parameters, connector):\n		return parameters\n\n	def executeGetAuthorizeAnswer(self, parameters, connector):\n		request = self.fillDictionary (parameters,\n			[\n            self.Security,\n            self.Merchant,\n            self.RequestKey,\n            self.AnswerKey\n			])\n\n		response = connector.getAuthorizeAnswer(request) \n		return asdict(response)\n	\n	def executeSendAuthorizeRequest(self, parameters, connector):\n		request = self.fillDictionary(parameters, \n            [self.Security, \n             self.Session, \n             self.Merchant, \n             self.UrlOk, \n             self.UrlError, \n             self.EncodingMethod,\n             self.EmailCliente])\n\n		payload = self.fillDictionary( parameters,[\n            self.Merchant.upper(),\n            self.OperationId,\n            self.CurrencyCode,\n            self.Amount,\n            self.EmailCliente,\n            self.CsbtCity,\n            self.CsbtCountry,\n            self.CsbtEmail,\n            self.CsbtFirstName,\n            self.CsbtLastName,\n            self.CsbtPhoneNumber,\n            self.CsbtPostalCode,\n            self.CsbtState,\n            self.CsbtStreet1,\n            self.CsbtStreet2,\n            self.CsbtCustomerId,\n            self.CsbtIpAddress,\n            self.CsptCurrency,\n            self.CsptGrandTotalAmount,\n            self.Csmdd6,\n            self.Csmdd7,\n            self.Csmdd8,\n            self.Csmdd9,\n            self.Csmdd10,\n            self.Csmdd11,\n            self.CsstCity,\n            self.CsstCountry,\n            self.CsstEmail,\n            self.CsstFirstName,\n            self.CsstLastName,\n            self.CsstPhoneNumber,\n            self.CsstPostalCode,\n            self.CsstState,\n            self.CsstStreet1,\n            self.CsstStreet2,\n            self.CsitProductCode,\n            self.CsitProductDescription,\n            self.CsitProductName,\n            self.CsitProductSku,\n            self.CsitTotalAmount,\n            self.CsitQuantity,\n            self.CsitUnitPrice,\n            self.Csmdd12,\n            self.Csmdd13,\n            self.Csmdd14,\n            self.Csmdd15,\n            self.Csmdd16])	\n\n		response = connector.sendAuthorizeRequest(request, payload) \n\n		parameters[self.RequestKey] = str(response[self.RequestKey])\n		parameters[self.PublicRequestKey] = str(response[self.PublicRequestKey])\n\n		return asdict(response)\n\n	def executePaymentService(self, parameters, xmlPath):\n		xmlPayload = self.loadPaymentMessage(parameters, xmlPath)\n\n		headers = {'Content-Type': 'application/xml'} 		\n		result = requests.post(parameters[self.PaymentEndPoint], data=xmlPayload, headers=headers).text \n\n		parameters[self.AnswerKey] = self.retrieveAnswerKey(result, parameters[self.UrlOk])\n		return { \"XmlMessage\", result };\n\n\n	def fillDictionary(self, parameters, fields):\n		res = {}\n\n		for field in fields:\n			try:\n				res[field] = parameters[field]\n			except Exception, exc:\n				raise FieldNotFoundException(\"Field %s wasn't provided in data file \" % field)\n\n		return res		\n\n	def loadPaymentMessage(self, parameters, xmlFile):\n		file = open(xmlFile, 'r')\n		xmlPayload = file.read()\n\n		xmlPayload = xmlPayload.replace(\"\\n\", \"\")\n		xmlPayload = xmlPayload.replace(\"${\" + self.Amount + \"}\", parameters[self.Amount])\n		xmlPayload = xmlPayload.replace(\"${\" + self.RequestKey + \"}\", parameters[self.PublicRequestKey].replace(\"t\", \"\"))\n		\n		return xmlPayload \n\n	def retrieveAnswerKey(self, xmlResult, urlOk):\n		answerKey = \"\"\n		pos = xmlResult.find(urlOk)\n		if pos > -1:\n			pos = pos  + len(urlOk) + len(\"?Answer=\")\n			answerKey = str(xmlResult[pos:pos+36])\n		else:\n			raise NoAnswerKeyException(\"No answer key as parameter of success url: %s\" % urlOk)\n		\n		return 	answerKey\n\n#main entry point\ntry:\n	program = Program()\n	if program.evaluateParameters(sys.argv) == 1:\n		program.writeResponse(program.executeCommand(program.loadParameters()))\n		\nexcept ConfigurationException, exc:\n	logError(exc.message)\nexcept NoAnswerKeyException, exc:\n	logError(exc.message)\nexcept FieldNotFoundException, exc:\n	logError(exc.message)\nexcept Exception, exc:\n	traceback.print_exc()",
+			"file": "src/Adapter.py",
+			"file_size": 13745,
+			"file_write_time": 131110084891297621,
+			"settings":
+			{
+				"buffer_size": 13261,
+				"line_ending": "Windows",
+				"name": "#log"
+			}
+		}
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 0.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+	],
+	"find":
+	{
+		"height": 34.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": true,
+		"find_history":
+		[
+			"print",
+			";"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 0,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "src/Adapter.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 13261,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								4753,
+								4753
+							]
+						],
+						"settings":
+						{
+							"auto_name": "#log",
+							"syntax": "Packages/Python/Python.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 2340.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 23.0
+	},
+	"input":
+	{
+		"height": 0.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "Packages/Python/Python.sublime-build",
+	"project": "Adapter.sublime-project",
+	"replace":
+	{
+		"height": 42.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 150.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}

@@ -1,0 +1,61 @@
+<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:api="http://api.todopago.com.ar">
+<soap:Header/>
+<soap:Body>
+<api:Execute xmlns:api="http://api.todopago.com.ar">
+<api:ApplicationIdentification>TodoPagoPaymentForm</api:ApplicationIdentification>
+<api:sequenceNumber/>
+<api:transportTimestamp/>
+<api:ServiceName>Authorize</api:ServiceName>
+<api:OperationName>Execute</api:OperationName>
+<api:Channel>6</api:Channel>
+<api:lastAnswerIdentification/>
+<api:lastAnswerIdentification/>
+<api:storageAdditionalData/>
+<api:responseAdditionalData/>
+<api:status/>
+<api:version/>
+<api:security/>
+<api:session/>
+<api:PayloadRequest>
+<Request>
+<Path>
+<Key>${PublicRequestKey}</Key>
+</Path>
+<Header>
+<host>127.0.0.1:8083</host>
+<connection>keep-alive</connection>
+<content-length>305</content-length>
+<cache-control>max-age=0</cache-control>
+<accept>text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8</accept>
+<origin>http://127.0.0.1:8083</origin>
+<user-agent>Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.90 Safari/537.36</user-agent>
+<content-type>application/x-www-form-urlencoded</content-type>
+<referer>http://127.0.0.1:8083/formulario/commands?command=formulario&amp;m=a9d43e65-7102-acbd-c9f8-bc4cb0d7c929</referer>
+<accept-encoding>gzip, deflate</accept-encoding>
+<accept-language>en-US,en;q=0.8,es;q=0.6</accept-language>
+<cookie>JSESSIONID=8B44BEE1C3C2010D8DB6AA7C4A84DE86</cookie>
+</Header>
+<Body/>
+<SUSBCRIBER></SUSBCRIBER>
+<CURRENCYCODE>032</CURRENCYCODE>
+<AMOUNT>${AMOUNT}</AMOUNT>
+<CSREMOTEIPADDR>192.168.1.1</CSREMOTEIPADDR>
+<INSTALLMENTPAYMENTS>1</INSTALLMENTPAYMENTS>
+<CUSTOMEREMAIL>todopagoqa30@outlook.com.ar</CUSTOMEREMAIL>
+<CARDNUMBER>4507990000000010</CARDNUMBER>
+<CARDEXPIRATIONDATE>1606</CARDEXPIRATIONDATE>
+<CARDSECURITYCODE>123</CARDSECURITYCODE>
+<PAYMENTMETHODCODE>42</PAYMENTMETHODCODE>
+<IDENTIFICATION>15842567</IDENTIFICATION>
+<IDENTIFICATIONTYPE>DNI</IDENTIFICATIONTYPE>
+<CARDHOLDERNAME>Franco Scarpello</CARDHOLDERNAME>
+<PROMOTIONIDENTIFICATION>2706</PROMOTIONIDENTIFICATION>
+<CSDEVICEFINGERPRINTID>31d3c854-9566-0a83-4b49-181cedb66568</CSDEVICEFINGERPRINTID>
+<copyPasteSecurityCode>N</copyPasteSecurityCode>
+<copyPasteCardNumber>N</copyPasteCardNumber>
+<BANKID>4</BANKID>
+</Request>
+</api:PayloadRequest>
+</api:Execute>
+</soap:Body>
+</soap:Envelope>
