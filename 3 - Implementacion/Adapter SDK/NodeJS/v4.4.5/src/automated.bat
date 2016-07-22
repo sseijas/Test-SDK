@@ -1,5 +1,8 @@
 ECHO OFF
-DEL ..\out\*.out
+DEL ..\..\..\Results\SDK-NodeJs\v4.4.5\Sample\*.out
 
-node Adapter.js /c:SendAuthorizeRequest /I:..\..\..\_Common\Samples\Sample_01_PaymentFlow.ini /o:..\out\Sample_01_PaymentFlow.out /x:..\..\..\_Common\Samples\WS_Execute_Request.xml
+
+
+node Adapter.js /c:SendAuthorizeRequest /i:..\..\..\..\Scenarios\Sample\Sample_01_PaymentFlow.ini /o:..\..\..\..\Results\SDK-NodeJs\v4.4.5\Sample\1_PaymentFlow.out /x:..\..\..\..\Scenarios\Sample\WS_Execute_Request.xml
+
 PAUSE

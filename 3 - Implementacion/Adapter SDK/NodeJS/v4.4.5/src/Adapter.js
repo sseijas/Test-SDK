@@ -3,6 +3,7 @@ const path = require("path");
 const fs   = require("fs");
 const util = require("util");
 const sdk =  require("../lib/todo-pago.js");
+var deasync = require('deasync');
 
 //The authorization key
 const	Authorization = "Authorization";
@@ -290,6 +291,7 @@ function loadParameters() {
 		var line = lines[i];
 		var values = line.split("=");
 		if (line != "" && line.substring(0,4).indexOf("//")<0 && values.length ==2){
+
 			var key = values[0].trim();
 			if (key == "URL OK"){
 				key = "URL_OK";
@@ -297,21 +299,20 @@ function loadParameters() {
 			if (key == "URL Error"){
 				key = "URL_ERROR";
 			}
+
 			if (key == "Encoding Method"){
-				key == "EncodingMethod";
+				key = "EncodingMethod";
 			}
 
 			var value = values[1].trim();
 			if (value == "null"){
 				value = "";
 			}
-			
-			parameters[key] = value;
+			parameters[key] = value;			
 		} 
 	}
 
 	logInfo(util.format("Parameters from [%s] loaded.", inputPath));
-	console.info (parameters.length);
 	return parameters;
 }
 
@@ -319,17 +320,17 @@ function executeCommand(message) {
 	
 	var options = {
 			endpoint : "developers",	
-			Authorization:message["Authorization"]
+			Authorization : message["Authorization"]
 	};
-  
-  var response = {};
-  
+
+	var res;  
+
 	if (command == PAYMENT_FLOW){
 	
 	}
 	
 	if (command == SEND_REQUEST){
-		response = executeSendAuthorizeRequest(message, options);
+		res = executeSendAuthorizeRequest(message, options);
 	}
 	
 	if (command == GET_ANSWER){
@@ -338,13 +339,13 @@ function executeCommand(message) {
 	
 	if (command == GET_STATUS){
 	
-	}
-	
-	logInfo("Command [" + command +  "] has been executed.")
-	return response;
+	}	
+	logInfo("Command [" + command +  "] has been executed.");
+	return res;
 }
 
 function executeSendAuthorizeRequest(parameters, options){
+
 	request = fillDictionary(parameters, 
             [Security, 
              Session, 
@@ -355,10 +356,10 @@ function executeSendAuthorizeRequest(parameters, options){
              OperationId,
              CurrencyCode,
              Amount]);
-  request[Merchant.toUpperCase()] = parameters[Merchant];
+    request[Merchant.toUpperCase()] = parameters[Merchant];
 
 	payload = fillDictionary( parameters,
-						[EmailCliente,
+			[EmailCliente,
             CsbtCity,
             CsbtCountry,
             CsbtEmail,
@@ -402,21 +403,23 @@ function executeSendAuthorizeRequest(parameters, options){
             Csmdd15,
             Csmdd16])	
 
+	var done = true;
+	var response;
 	sdk.sendAutorizeRequest(options, request, payload, function(result, err){
-		console.log("sendAutorizeRequest");
-		console.log(result);
-		console.log(err);
-		console.log("-------------------");
 
 		if (err) {
 			throw err;
 		}
 		
-		parameters[RequestKey] = str(result[RequestKey])
-		parameters[PublicRequestKey] = str(result[PublicRequestKey])
-
-		return result
+		parameters[RequestKey] = result[RequestKey];
+		parameters[PublicRequestKey] = result[PublicRequestKey];
+		done = true;
+		response = result;
 	});
+
+	deasync.loopWhile(function(){return !done;});
+
+	return response;
 }
 
 function executeGetAuthorizeAnswer(message, options){
@@ -429,51 +432,60 @@ function executePaymentService(message){
 }
 
 function fillDictionary(parameters, fields){
-	res = {};
+	res = [];
 	
 	for (var i = 0; i < fields.length; i++){
   	try {
-  		res[fields[i], parameters[fields[i]]];
+  		res[fields[i]] = parameters[fields[i]];
   	} catch (err){
-			throw { message: util.format("Field %s wasn't been provided in data file.", fields[i]), code:  FIELDNOTFOUND_EXCEPTION };  		
+			throw { message: util.format("Field [%s] wasn't been provided in data file.", fields[i]), code:  FIELDNOTFOUND_EXCEPTION };  		
   	}  	
   }	
   return res;
 }
 
-function writeResponse(message){
+function writeResponse(message, options, nextsSteps){
 	var buffer = writeDictionary(message);
 	
 	fs.writeFile(outputPath, buffer, function(err) {
-    if(err) {
-        throw err;
-    }
+		if(err) {
+			throw err;
+		}
 		logInfo("File [" + outputPath +"] has been written.")
-}); 
+	}); 
 }
 
 function writeDictionary(message){
 	var buffer = "";	
-	Object.keys(message).forEach(function(key) {
-  	var value = message[key];  	  	
-  	
-  	if (typeof value == "object") {  		  		
-  		buffer = buffer + "******************" + key + "****************************\n";
-  		buffer = buffer + writeDictionary(value);
-  		buffer = buffer + "\n";
-  		
-  	} else {
-	  	buffer = buffer + key + "=" + value + "\n";  		
-  	}
-	});
+
+	if (typeof message != 'undefined'){
+		Object.keys(message).forEach(function(key) {
+			var value = message[key];  	  	
+
+			if (typeof value == "object") {  		  		
+				buffer = buffer + "******************" + key + "****************************\n";
+				buffer = buffer + writeDictionary(value);
+				buffer = buffer + "\n";
+				
+			} else {
+				buffer = buffer + key + "=" + value + "\n";  		
+			}
+		});
+	}
 	return buffer;
 }
 
 //Main entry point
 try {
-	if (evaluateParameters(process.argv) == 1) {
-		  writeResponse(executeCommand(loadParameters()));
-	}	
+	
+	if (evaluateParameters(process.argv) == 1) {		  
+		  	  writeResponse(
+		  	  	executeCommand(
+		  	  		loadParameters()
+		  	  	)
+		  	  );
+	}
+		
 } catch (err){	
 	if (err.code == CONFIGURATION_EXCEPTION || err.code == FIELDNOTFOUND_EXCEPTION) {
 		logError(err.message);	
