@@ -1,7 +1,6 @@
 ECHO OFF
-DEL .\Samples\*.out
+DEL ..\..\..\Results\SDK-Net\v4.0\Sample\*.out
 
 
-Adapter.exe /c:PaymentFlow /i:.\Samples\Sample_01_PaymentFlow.ini /o:.\Samples\Sample_01_PaymentFlow.out /x:.\Samples\WS_Execute_Request.xml
-
+Adapter.exe /c:PaymentFlow /i:..\..\..\Scenarios\Sample\Sample_01_PaymentFlow.ini /o:..\..\..\Results\SDK-PHP\v5.3\Sample\1_PaymentFlow.out /x:..\..\..\Scenarios\Sample\WS_Execute_Request.xml
 PAUSE
