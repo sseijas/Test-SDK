@@ -3,7 +3,10 @@ const path = require("path");
 const fs   = require("fs");
 const util = require("util");
 const sdk =  require("../lib/todo-pago.js");
+const http = require('https');
+const url = require('url');
 var deasync = require('deasync');
+
 
 //The authorization key
 const	Authorization = "Authorization";
@@ -197,6 +200,8 @@ const CONFIGURATION_EXCEPTION = 100;
 
 const FIELDNOTFOUND_EXCEPTION = 200;
 
+const NO_RESPONSEKEY_EXCEPTION = 300;
+
 //Log functions
 function logError(message){
 	console.error("ERROR:" + message);	
@@ -317,7 +322,7 @@ function loadParameters() {
 }
 
 function executeCommand(message) {
-	
+
 	var options = {
 			endpoint : "developers",	
 			Authorization : message["Authorization"]
@@ -326,7 +331,11 @@ function executeCommand(message) {
 	var res;  
 
 	if (command == PAYMENT_FLOW){
-	
+		var response = {};
+		response[SEND_REQUEST] = executeSendAuthorizeRequest(message, options);
+		response[PAYMENT_FLOW] = executePaymentService(message, xmlPath);
+		response[GET_ANSWER] = executeGetAuthorizeAnswer(message, options);
+		res = response;
 	}
 	
 	if (command == SEND_REQUEST){
@@ -334,12 +343,13 @@ function executeCommand(message) {
 	}
 	
 	if (command == GET_ANSWER){
-	
+		res = executeGetAuthorizeAnswer(message, options);
 	}
 	
 	if (command == GET_STATUS){
 	
 	}	
+
 	logInfo("Command [" + command +  "] has been executed.");
 	return res;
 }
@@ -347,19 +357,19 @@ function executeCommand(message) {
 function executeSendAuthorizeRequest(parameters, options){
 
 	request = fillDictionary(parameters, 
-            [Security, 
-             Session, 
-             Merchant, 
-             UrlOk, 
-             UrlError, 
-             EncodingMethod,
-             OperationId,
-             CurrencyCode,
-             Amount]);
-    request[Merchant.toUpperCase()] = parameters[Merchant];
+            [Session,
+            Security, 
+            EncodingMethod, 
+            Merchant, 
+            UrlOk, 
+            UrlError,
+            Merchant.toUpperCase(),
+            OperationId,
+            CurrencyCode,
+            Amount]);
 
 	payload = fillDictionary( parameters,
-			[EmailCliente,
+			[
             CsbtCity,
             CsbtCountry,
             CsbtEmail,
@@ -369,17 +379,6 @@ function executeSendAuthorizeRequest(parameters, options){
             CsbtPostalCode,
             CsbtState,
             CsbtStreet1,
-            CsbtStreet2,
-            CsbtCustomerId,
-            CsbtIpAddress,
-            CsptCurrency,
-            CsptGrandTotalAmount,
-            Csmdd6,
-            Csmdd7,
-            Csmdd8,
-            Csmdd9,
-            Csmdd10,
-            Csmdd11,
             CsstCity,
             CsstCountry,
             CsstEmail,
@@ -389,21 +388,29 @@ function executeSendAuthorizeRequest(parameters, options){
             CsstPostalCode,
             CsstState,
             CsstStreet1,
-            CsstStreet2,
+            CsbtCustomerId,
+            CsbtIpAddress,
+            CsptCurrency,
+            CsptGrandTotalAmount,
+            Csmdd7,
+            Csmdd8,
+            Csmdd9,
+            Csmdd10,
+            Csmdd11,
+            Csmdd12,
+            Csmdd13,
+            Csmdd14,
+            Csmdd15,
+            Csmdd16,
             CsitProductCode,
             CsitProductDescription,
             CsitProductName,
             CsitProductSku,
             CsitTotalAmount,
             CsitQuantity,
-            CsitUnitPrice,
-            Csmdd12,
-            Csmdd13,
-            Csmdd14,
-            Csmdd15,
-            Csmdd16])	
+            CsitUnitPrice]);	
 
-	var done = true;
+	var done = false;
 	var response;
 	sdk.sendAutorizeRequest(options, request, payload, function(result, err){
 
@@ -411,6 +418,18 @@ function executeSendAuthorizeRequest(parameters, options){
 			throw err;
 		}
 		
+		if (result[RequestKey] == null){ 
+			throw { message: util.format("SendAuthorizeRequest response didn't provide a value for [%s]", RequestKey), 
+					code:  NO_RESPONSEKEY_EXCEPTION, 
+					context: result};
+		}
+
+		if (result[PublicRequestKey] == null){ 
+			throw { message: util.format("SendAuthorizeRequest response didn't provide a value for [%s]", PublicRequestKey), 
+					code:  NO_RESPONSEKEY_EXCEPTION, 
+					context: result};
+		}
+
 		parameters[RequestKey] = result[RequestKey];
 		parameters[PublicRequestKey] = result[PublicRequestKey];
 		done = true;
@@ -418,29 +437,108 @@ function executeSendAuthorizeRequest(parameters, options){
 	});
 
 	deasync.loopWhile(function(){return !done;});
-
+	
 	return response;
 }
 
-function executeGetAuthorizeAnswer(message, options){
+function executeGetAuthorizeAnswer(parameters, options){
+	var request = fillDictionary(parameters, [Security, Merchant, RequestKey, AnswerKey]);
+
+	var response = "";
+	var done = false;
+	sdk.getAutorizeAnswer(options, request, function(result, err){
+
+		if (err) {
+			throw err;
+		}
+		
+		response = result;
+		done = true;
+	});
+
+	deasync.loopWhile(function(){return !done;});
+
+	return response;
 }
 
 function executeGetStatus(message, options){
 }
 
-function executePaymentService(message){
+function executePaymentService(parameters, xmlPath){
+
+	var xmlPayload = loadPaymentMessage(parameters, xmlPath);
+
+	var uo = url.parse(parameters[PaymentEndPoint]);
+
+	var options = {
+		host: uo.host,
+		port: '443',
+		path: uo.path,
+		method: 'POST',
+		headers: {
+		'Content-Type': 'application/xml; charset=utf-8',
+		'Content-Length': xmlPayload.length
+		}
+	};
+
+	var done = false;
+	var response = '';
+	var req = http.request(options, function(res) {
+		
+		res.setEncoding('utf8');
+		res.on('data', function(chunk) {
+			response += chunk;
+		});
+		res.on('end', function() {
+			done = true;
+		});
+	});
+
+	req.write(xmlPayload);
+	req.end();
+
+	deasync.loopWhile(function(){return !done;});
+
+	var answerKey = retrieveAnswerKey(response, parameters[UrlOk]);
+	parameters[AnswerKey] = answerKey;
+
+	var ret = {};
+	ret["XmlMessage"] = response; 
+	return ret;
+}
+
+function loadPaymentMessage(parameters, xmlPath){
+	var xmlPayload = fs.readFileSync(xmlPath).toString();
+
+	xmlPayload = xmlPayload.replace("${" + Amount + "}", parameters[Amount])
+	xmlPayload = xmlPayload.replace("${" + PublicRequestKey + "}", parameters[PublicRequestKey].replace("t", ""))
+
+	 return xmlPayload;
+}
+
+function retrieveAnswerKey(message, urlOk){
+	var answerKey = "";
+	var pos = message.indexOf(urlOk);
+	if (pos > -1){
+		pos = pos + urlOk.length + "?Answer=".length;
+		answerKey = message.substring(pos, pos + 36);
+	} else 
+	{
+		throw { message: util.format("No answer key as parameter of success url: [%s].", urlOk), code:  NO_RESPONSEKEY_EXCEPTION, context: message };
+	}
+	return answerKey;
 }
 
 function fillDictionary(parameters, fields){
-	res = [];
+	res = {};
 	
 	for (var i = 0; i < fields.length; i++){
-  	try {
-  		res[fields[i]] = parameters[fields[i]];
-  	} catch (err){
+  		try {
+  			res[fields[i]] = parameters[fields[i]];
+  		} catch (err){
 			throw { message: util.format("Field [%s] wasn't been provided in data file.", fields[i]), code:  FIELDNOTFOUND_EXCEPTION };  		
-  	}  	
-  }	
+  		}  	
+  	}	
   return res;
 }
 
@@ -477,7 +575,6 @@ function writeDictionary(message){
 
 //Main entry point
 try {
-	
 	if (evaluateParameters(process.argv) == 1) {		  
 		  	  writeResponse(
 		  	  	executeCommand(
@@ -485,10 +582,12 @@ try {
 		  	  	)
 		  	  );
 	}
-		
 } catch (err){	
 	if (err.code == CONFIGURATION_EXCEPTION || err.code == FIELDNOTFOUND_EXCEPTION) {
-		logError(err.message);	
+		logError(err.message);
+	} else if (err.code == NO_RESPONSEKEY_EXCEPTION) {
+		logError(err.message);
+		writeResponse(err.context);
 	} else {		
 		console.error (err.stack);
 	} 
