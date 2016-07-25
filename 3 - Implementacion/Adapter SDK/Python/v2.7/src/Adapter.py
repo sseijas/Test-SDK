@@ -459,12 +459,12 @@ class SkdServices:
 		response = connector.sendAuthorizeRequest(request, payload) 
 
 		if not self.RequestKey in response:
-			raise NoResponseKeyException("SendAuthorizeRequest response didn't provide a value for %s" % self.RequestKey)
+			raise NoResponseKeyException("SendAuthorizeRequest response didn't provide a value for [%s]" % self.RequestKey)
 
 		parameters[self.RequestKey] = str(response[self.RequestKey])
 
 		if not self.PublicRequestKey in response:
-			raise NoResponseKeyException("SendAuthorizeRequest response didn't provide a value for %s" % self.PublicRequestKey)
+			raise NoResponseKeyException("SendAuthorizeRequest response didn't provide a value for [%s]" % self.PublicRequestKey)
 
 		parameters[self.PublicRequestKey] = str(response[self.PublicRequestKey])
 
