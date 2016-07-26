@@ -1,7 +1,6 @@
 <?php
 
-include_once '../lib/vendor/autoload.php';
-include_once '../lib/Sdk.php';
+include_once dirname(__FILE__)."/../vendor/autoload.php";
 
 use TodoPago\Sdk;
 
@@ -59,6 +58,7 @@ class Program{
     const SendRequest = "SendAuthorizeRequest";
     const GetAnswer = "GetAuthorizeAnswer";
     const PaymentFlow = "PaymentFlow";
+    const BSA_Discover = "BSADiscover";
 
     private static $AvailableCommands;
 
@@ -73,19 +73,20 @@ class Program{
      */
     public function __construct()
     {                       
-        self::$AvailableCommands = array (self::SendRequest, self::GetAnswer, self::PaymentFlow);
+        self::$AvailableCommands = array (self::SendRequest, self::GetAnswer, self::PaymentFlow, self::BSA_Discover);
     }
         
     public function EvaluateParameters($args)
     {
         foreach ($args as $key => $value) 
         {
+
             if (strncmp(strtolower($value), "/?", 2) == 0)
             {
                 echo "Usage mode: > php Adapter.php /c:{command} /i:{Path and file} /o:{Path and file} /x:{Path and File}".PHP_EOL;
                 echo "Where: ".PHP_EOL;
                 echo "/c: The command name, must be one of following: ".join(',',self::$AvailableCommands).PHP_EOL;
-                echo "/i: Path and filename for input file (command's parameters values file)".PHP_EOL;
+                echo "/i: Path and filename for input file (command's parameters values file if requires)".PHP_EOL;
                 echo "/o: Path and filename for output file (command's response file)".PHP_EOL;
                 echo "/x: Path and filename for xml payment service, requires for ".self::PaymentFlow." command".PHP_EOL;
                 return false;
@@ -217,7 +218,7 @@ class Program{
     // <returns>The response command.</returns>
     public function ExecuteCommand($parameters)
     {
-        $response = NULL;
+        $response = Array();
         $SdkServices = new SdkServices();
 
         $connector = $SdkServices->InitConnector($parameters);
@@ -233,11 +234,13 @@ class Program{
                 break;
             
             case self::PaymentFlow:
-                $res = Array();
-                $res[self::SendRequest] = $SdkServices->ExecuteSendAuthorizeRequest($parameters, $connector);          
-                $res[self::PaymentFlow] = $SdkServices->ExecutePaymentService($parameters, $this->XmlPath);
-                $res[self::GetAnswer] = $SdkServices->ExecuteGetAuthorizeAnswer($parameters, $connector);              
-                $response = $res;
+                $response[self::SendRequest] = $SdkServices->ExecuteSendAuthorizeRequest($parameters, $connector);          
+                $response[self::PaymentFlow] = $SdkServices->ExecutePaymentService($parameters, $this->XmlPath);
+                $response[self::GetAnswer] = $SdkServices->ExecuteGetAuthorizeAnswer($parameters, $connector);              
+                break;
+
+            case self::BSA_Discover:
+                $response[self::BSA_Discover] = $SdkServices->ExecuteBsaDiscover($connector);
                 break;
         }
 
@@ -434,7 +437,7 @@ class SdkServices {
                         self::Authorization => $parameters[self::Authorization]    
                         );
 
-        return new Sdk($headers);
+        return new \TodoPago\Sdk($headers, "test");
     }
     
     
@@ -649,7 +652,13 @@ class SdkServices {
         return $res;
     }
     
-    
+    public static function ExecuteBsaDiscover($connector){
+        echo "Call service..".PHP_EOL;
+        $res = $connector->BSA()->Discover();
+        echo "Call complete".PHP_EOL;
+        var_dump($res);
+        return $res;
+    }    
     
     /// <summary>
     /// Loads and compose web services payment message
@@ -692,6 +701,10 @@ class SdkServices {
     }
     
 }
+
+#spl_autoload_register(function ($class_name) {
+#    include $class_name . '.php';
+#});
 
 function Main($args)
 {
