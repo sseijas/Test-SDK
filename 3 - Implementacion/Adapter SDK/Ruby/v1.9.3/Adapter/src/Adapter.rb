@@ -7,6 +7,7 @@ require "../lib/Exceptions/empty_field_user_exception.rb"
 require "../lib/Exceptions/empty_field_password_exception.rb"
 require "../lib/Exceptions/connection_exception.rb"
 require "../lib/Exceptions/response_exception.rb"
+require '../lib/discover.rb'
 
 require 'uri'
 require 'net/protocol'
@@ -66,6 +67,7 @@ class Program
     SEND_REQUEST = 'SendAuthorizeRequest'
     GET_ANSWER = 'GetAuthorizeAnswer'
     PAYMENT_FLOW = 'PaymentFlow'
+    BSA_DISCOVER = 'BSADiscover'
 
     @input_path = nil
     @output_path = nil
@@ -220,6 +222,8 @@ class Program
                 res[GET_ANSWER] = adapter.execute_get_authorize_answer(parameters, connector)
                 response = res
 
+          when BSA_DISCOVER
+                response =  adapter
             else
                 @log.error("No command executed for #{@command}")
         end
@@ -497,6 +501,17 @@ class SdkServices
       return response
   end
 
+
+  ##########################
+  # Execute the BSA Disconvery method
+  # @param [TodoPagoConector] connector
+  # @return [Hash]
+  ##########################
+  def execute_bsa_discovery(connector)
+      discover = Discover.new()
+      discover = conector.discoverPaymentMethods(discover)
+      return discover
+  end
   ##########################
   # Recovery the values from required list into dictionary
   # @param [Hash] parameters
