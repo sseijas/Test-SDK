@@ -2,6 +2,6 @@
 
 namespace TodoPago\Exception;
 
-class ResponseException extends \Exception {
+class ResponseException extends \TodoPago\Exception\TodoPagoException {
 	
 }

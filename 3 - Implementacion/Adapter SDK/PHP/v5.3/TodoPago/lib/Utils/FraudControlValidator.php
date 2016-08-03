@@ -15,7 +15,6 @@ class FraudControlValidator {
 	private $mailregex = "/^[A-Za-z0-9](([_\.\-]?[a-zA-Z0-9]+)*)@([A-Za-z0-9]+)(([\.\-]?[a-zA-Z0-9]+)*)\.([A-Za-z])+$/";
 	private $ipregex = "/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/";
 	private $yesnoregex = "/^[SsNn]$/";
-	private $letterregex = "/^[A-Za-z]{1}$/";
 
 	private static $csitcant;
 
@@ -70,8 +69,15 @@ class FraudControlValidator {
 	}
 
 	protected function clean($field) {
-		$field = preg_replace('![^'.preg_quote('-').'a-zA-Z0-_9@.\s]+!', '', $field);
-		$field = str_replace(array("<",">","="), "", $field);
+		$field = htmlspecialchars_decode($field);
+		$field = strip_tags($field);
+		$re = "/\\[(.*?)\\]|<(.*?)\\>/i"; 
+		$subst = "";
+		$field = preg_replace($re, $subst, $field);
+		$field = preg_replace('/[\x00-\x1f]/','',$field);
+		$field = preg_replace('/[\xc2-\xdf][\x80-\xbf]/','',$field);
+		$replace = array("\n","\r",'\n','\r','&nbsp;','&','<','>');
+		$field = str_replace($replace, '', $field);
 		return $field;
 	}
 
@@ -142,7 +148,7 @@ class FraudControlValidator {
 		return $cant;
 	}
 
-	protected function csitFormat($field, $number = false) {
+	protected function csitFormat($field) {
 		$cant = self::$csitcant;
 
 		$limit = (int)254/$cant ;
@@ -150,21 +156,11 @@ class FraudControlValidator {
 		$res = array();
 		if(count($arr) > $cant) {
 			for($i = 0; $i < $cant; $i++) {
-				$arr[$i] = $this->clean($res[$i]);
-				if($number) {
-					$res[$i] = $this->amount($arr[$i]);
-				} else {
-					$res[$i] = $this->truncate($arr[$i],array(19));	
-				}
+				$res[$i] = $this->truncate($arr[$i],array(19));
 			}
 		} else {
 			foreach($arr as $key => $item) {
-				$item = $this->clean($item);
-				if($number) {
-					$res[$key] = $this->amount($item);
-				} else {
-					$res[$key] = $this->truncate($item,array($limit));	
-				}
+				$res[$key] = $this->truncate($item,array($limit));
 			}
 		}
 		$field = implode("#", $res);
@@ -187,6 +183,7 @@ class FraudControlValidator {
 			} else {
 				$field = "";
 			}
+			
 
 			if(!isset($config["format"])) {
 				$this->result[$config["field"]] = $field;
@@ -216,13 +213,12 @@ class FraudControlValidator {
 						$this->result[$config["field"]] = $this->amount($field);
 					break;
 					case "csitFormat":
-						$this->result[$config["field"]] = $this->csitFormat($field,$val["params"][0]);
+						$this->result[$config["field"]] = $this->csitFormat($field,$val["params"]);
 					break;
 					default:
 						throw new \TodoPago\Exception\FraudControlException("format not implemented");	
 					break;
 				}
-				$field = $this->result[$config["field"]];
 			}
 			unset($this->data[$config["field"]]);
 		}
@@ -231,6 +227,7 @@ class FraudControlValidator {
 				$this->result[$key] = $this->clean($data);
 			}
 		}
+
 	}
 
 	public function validate($data) {
@@ -267,7 +264,6 @@ class FraudControlValidator {
 						throw new \TodoPago\Exception\FraudControlException("validation not implemented");	
 					break;
 				}
-				$field = $this->data[$config["field"]];
 			}
 		}
 	}

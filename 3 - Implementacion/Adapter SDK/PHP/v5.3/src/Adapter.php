@@ -135,7 +135,7 @@ class Program{
             throw new ConfigurationException("Command wasn't been configured, execute with /? for more information");
         }
 
-        if (is_null($this->InputPath) or empty($this->InputPath))
+        if (is_null($this->InputPath) or empty($this->InputPath)) 
         {
             throw new ConfigurationException("InputPath wasn't been configured, execute with /? for more information");
         }
@@ -654,7 +654,7 @@ class SdkServices {
     
     public static function ExecuteBsaDiscover($connector){
         echo "Call service..".PHP_EOL;
-        $res = $connector->BSA()->Discover();
+        $res = $connector->BSA()->discover();
         echo "Call complete".PHP_EOL;
         var_dump($res);
         return $res;
@@ -735,6 +735,7 @@ function Main($args)
     }
     catch (Exception $e) 
     {
+        var_dump($e);
         Log::Error($e->getMessage());
         Log::Error($e->getTrace());
     }
