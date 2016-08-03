@@ -44,13 +44,19 @@ public final class Program {
     private static final String PAYMENT_FLOW = "PaymentFlow";
 
     /**
+     * The bsa discover method
+     */
+    private static final String BSA_DISCOVER = "BSADiscover";
+    
+    /**
      *  The list of available commands
      */
     private static final List<String> AVAILABLE_COMMANDS = Arrays.asList(
     		SEND_REQUEST, 
     		GET_ANSWER, 
     		GET_STATUS, 
-    		PAYMENT_FLOW);
+    		PAYMENT_FLOW,
+    		BSA_DISCOVER);
     
     /**
      * The command to execute
@@ -158,9 +164,9 @@ public final class Program {
                 String p = Paths.get(currentDirectory, arg.substring(3)).normalize().toString();
             	setOutputPath(p);
 
-                File f = new File(getOutputPath());
+                File f = (new File(getOutputPath())).getParentFile();
             	
-                if (f.exists() && f.isDirectory())                {
+                if (!f.exists() || !f.isDirectory())                {
                     throw new ConfigurationException(String.format("Path [%s] not found.", getOutputPath()));
                 }
             } else if (arg.startsWith("/x:")  || arg.startsWith("/X:")) {
@@ -267,6 +273,9 @@ public final class Program {
                 res.put("3." + GET_ANSWER, SdkServices.executeGetAuthorizeAnswer(parameters, connector));               
                 response = res;
                 break;
+            case BSA_DISCOVER:
+            	response = SdkServices.executeBsaDiscover(connector);
+            	break;
         }
 		
         Log.info(String.format("Command [%s] has been executed.", getCommand()));

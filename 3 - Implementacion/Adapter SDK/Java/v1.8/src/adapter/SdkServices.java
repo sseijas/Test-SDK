@@ -19,6 +19,9 @@ import java.util.List;
 import java.util.Map;
 
 import ar.com.todopago.api.*;
+import ar.com.todopago.api.exceptions.ConnectionException;
+import ar.com.todopago.api.exceptions.ResponseException;
+import ar.com.todopago.api.model.PaymentMethodsBSA;
 /**
  * @author EA0734
  *
@@ -484,6 +487,21 @@ public class SdkServices {
         Map<String, Object> response = new HashMap<String, Object>();
         response.put("XmlMessage", outputString);
         return response;
+    }
+    
+    public static Map<String, Object> executeBsaDiscover(TodoPagoConector connector){
+    	
+    	PaymentMethodsBSA paymentMethod;
+    	try {
+			paymentMethod = connector.discoverPaymentMethodBSA();
+			List<Map<String, Object>> bas = paymentMethod.getPaymentMethodsBSAList();
+			
+			System.out.println(bas.size());
+		} catch (ConnectionException | ResponseException e) {
+			e.printStackTrace();
+		}
+    	
+    	return null;
     }
     
     /**
